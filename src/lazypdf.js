@@ -1,25 +1,34 @@
 import "babel-polyfill";
 
-/* Aztek Internal script for lazy loading images servered from https://github.com/dampee/ImageProcessor.Plugins.Pdf/ */
 (function () {
-'use strict';
-    const lazyPdfs = Array.from(window.document.getElementsByClassName('lazypdf'));
+    const lazyPdfs = Array.from(document.getElementsByClassName('lazypdf'));
     if (!lazyPdfs.length) return true;
 
-    lazyPdfs.forEach(lp => {
-        const dataSrcAttr = lp.getAttribute('data-src');
-        if (typeof dataSrcAttr !== typeof undefined && dataSrcAttr !== false) {
-            loadImageFromPDF(lp, dataSrcAttr);
+    lazyPdfs.forEach(asyncSetupLazyPdf);
+
+    async function asyncSetupLazyPdf(lp) {
+        const dataSrcAttr = lp.dataset.src || "";
+        const origSrc = lp.src;
+
+        if (typeof dataSrcAttr !== typeof undefined && dataSrcAttr !== false && dataSrcAttr.length) {
+            const isSuccess = await asyncloadLazyPDF(lp, dataSrcAttr);
+            if (!isSuccess && origSrc.length) {
+                lp.setAttribute('src', origSrc);
+            }
         }
-    });
-    
-    async function loadImageFromPDF(el, src) {
-        await asyncloadLazyPDF(el, src);
     }
 
-    function asyncloadLazyPDF(el, src) {
-        return new Promise((resolve, reject) => {    
-        		el.addEventListener('load', () => { resolve(true); });           
+    async function asyncloadLazyPDF(el, src) {
+        try {
+            return await handleImageLoad(el, src);
+        } catch (err) {
+            return false;
+        }
+    }
+
+    function handleImageLoad(el, src) {
+        return new Promise((resolve, reject) => {
+            el.addEventListener('load', () => { resolve(true); });
             el.addEventListener('error', reject);
             el.setAttribute('src', src);
         });
